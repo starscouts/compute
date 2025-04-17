@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>compute</title>
+    <style>
+        @font-face {
+            src: url("./font.ttf");
+            font-family: "VGA";
+        }
+
+        * {
+            font-family: VGA, monospace;
+            background-color: black;
+            color: #aaaaaa;
+        }
+    </style>
+    <script>
+        setInterval(() => {
+            if (document.getElementById("cursor").style.opacity === "1") {
+                document.getElementById("cursor").style.opacity = "0";
+            } else {
+                document.getElementById("cursor").style.opacity = "1";
+            }
+        }, 250);
+
+        setInterval(() => {
+            document.getElementById("input").focus();
+        })
+    </script>
+</head>
+<body style="margin: 0;">
+    <input style="opacity: 0; pointer-events: none;position: fixed;" id="input">
+    <script>
+        window.inputBuffer = "";
+
+        document.onkeydown = (event) => {
+            console.log(event);
+
+            if (event.ctrlKey || event.altKey || event.metaKey) {
+                event.preventDefault();
+                return false;
+            }
+
+            if (event.code === "Backspace") {
+                if (document.getElementById("text").innerText.substring(document.getElementById("text").innerText.length - 1, document.getElementById("text").innerText.length) !== "​") {
+                    document.getElementById("text").innerText = document.getElementById("text").innerText.substring(0, document.getElementById("text").innerText.length - 1);
+                    inputBuffer = inputBuffer.substring(0, inputBuffer.length - 1);
+                    inputBuffer = inputBuffer.replaceAll("​", "");
+                }
+            } else if (event.code === "Enter") {
+                document.getElementById("text").innerText += "\n";
+                if (proc) proc.stdin.write(inputBuffer + "\n");
+                document.getElementById("text").setAttribute("data-editable", "false");
+                inputBuffer = "";
+            }
+        }
+
+        document.getElementById("input").onkeyup = (event) => {
+            if (event.ctrlKey && event.metaKey && event.code === "KeyC") {
+                if (proc) {
+                    proc.kill("SIGINT");
+                }
+
+                event.preventDefault();
+                return false;
+            }
+
+            if (event.ctrlKey || event.altKey || event.metaKey) {
+                event.preventDefault();
+                return false;
+            }
+
+            if (document.getElementById("text").getAttribute("data-editable") !== "false") {
+                document.getElementById("text").innerText += document.getElementById("input").value;
+                inputBuffer += document.getElementById("input").value;
+                inputBuffer = inputBuffer.replaceAll("​", "");
+            }
+
+            document.getElementById("input").value = "";
+        }
+    </script>
+<pre id="text" data-editable="false" style="margin: 0; display: inline;"></pre><span id="cursor">_</span>
+
+<script>
+    const child_process = require("child_process");
+
+    window.onload = () => {
+        setTimeout(() => {
+            window.proc = child_process.spawn("node", ["index.js"], { cwd: "os", stdio: "pipe" });
+
+            proc.stdout.on('data', (data) => {
+                document.getElementById("text").innerText += data.toString().replaceAll("", "").replaceAll("", "");
+
+                if (data.toString().includes("")) {
+                    document.getElementById("text").setAttribute("data-editable", "true");
+                } else if (data.toString().includes("")) {
+                    document.getElementById("text").setAttribute("data-editable", "false");
+                }
+            });
+
+            proc.on('exit', (code, signal) => {
+                if (code !== 0) {
+                    console.log(code, signal);
+                    document.getElementById("text").setAttribute("data-editable", "false");
+                    document.getElementById("text").innerText += "\n\n---\n\nThe machine encountered a fatal error and has been halted."
+                } else {
+                    document.getElementById("text").setAttribute("data-editable", "false");
+                    document.getElementById("text").innerText += "\n\n---\n\nYou can now safety power off the machine."
+                }
+            });
+        }, 1000);
+    }
+</script>
+</body>
+</html>
